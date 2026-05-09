@@ -326,6 +326,8 @@ This means answer-time LLM cost is based on selected prompt tokens and output to
 <a id="toc-whole-pipeline-evolution"></a>
 ## Whole pipeline evolution
 
+<img width="1672" height="941" alt="ChatGPT Image Apr 30, 2026, 04_47_11 PM" src="https://github.com/user-attachments/assets/2ef1e05b-1303-46db-b7c0-640a665e8b44" />
+
 The project evolved in three major phases.
 
 <a id="toc-phase-1-google-colab-no-llm-local-retrieval-engineering"></a>
@@ -1107,6 +1109,10 @@ This project is a cloud-deployable proof of concept, not a production system.
 | Visualizations | Present |
 | Q6 negative-control trap | Present |
 | Cost/token measurement plan | Present |
+
+![Azure Foundry AI - proj e22 - gpt-4.1 Deployment - Metrics 1](https://hackmd.io/_uploads/rJ1OpD2R-e.png)
+
+![Azure Foundry AI - proj e22 - gpt-4.1 Deployment - Metrics 2](https://hackmd.io/_uploads/SymuawnA-g.png)
 
 <a id="toc-missing-for-production"></a>
 ### Missing for production
