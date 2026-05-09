@@ -37,7 +37,7 @@ Click any section title below to jump directly to that part of the README.
 - [Project links](#toc-project-links)
 - [Author and course context](#toc-author-and-course-context)
 - [Executive summary](#toc-executive-summary)
-- [Why this matters for Corporate / Income Tax Advisory](#toc-why-this-matters-for-corporate-income-tax-advisory)
+- [Why this matters for Corporate Tax Advisory](#toc-why-this-matters-for-corporate-tax-advisory)
 - [Problem statement](#toc-problem-statement)
 - [Data source and artifact](#toc-data-source-and-artifact)
   - [Preserved artifact properties](#toc-preserved-artifact-properties)
@@ -94,7 +94,7 @@ Click any section title below to jump directly to that part of the README.
 - [Production-readiness status](#toc-production-readiness-status)
   - [Present in prototype](#toc-present-in-prototype)
   - [Missing for production](#toc-missing-for-production)
-- [Future production path for Income Tax Act Advisory RAG](#toc-future-production-path-for-income-tax-act-advisory-rag)
+- [Future production path for Corporate Tax Act Advisory RAG](#toc-future-production-path-for-corporate-tax-act-advisory-rag)
 - [Troubleshooting](#toc-troubleshooting)
   - [The app says the artifact cannot be found](#toc-the-app-says-the-artifact-cannot-be-found)
   - [Azure OpenAI direct call fails](#toc-azure-openai-direct-call-fails)
@@ -149,8 +149,8 @@ The current cloud benchmark shows that the system consistently finds the correct
 
 ---
 
-<a id="toc-why-this-matters-for-corporate-income-tax-advisory"></a>
-## Why this matters for Corporate / Income Tax Advisory
+<a id="toc-why-this-matters-for-corporate-tax-advisory"></a>
+## Why this matters for Corporate Tax Advisory
 
 Tax-advisory work depends on facts that are often buried in PDFs, tables, footnotes, jurisdiction rows, dates, thresholds, and narrow exceptions. A fluent model can still be wrong if it selects the wrong province, year, table row, threshold, rate, or numbered note.
 
@@ -180,7 +180,7 @@ The advisory value is:
 AI gets the team to the right source faster, while keeping evidence visible for review.
 ```
 
-For an Income Tax Act Advisory LLM + RAG project, the same architecture can be adapted to approved internal knowledge sources, such as curated legislation excerpts, technical guidance, checklists, interpretation notes, rate tables, and internal research memos, assuming proper access control, data-governance review, and human validation.
+For an Corporate Tax Act Advisory LLM + RAG project, the same architecture can be adapted to approved internal knowledge sources, such as curated legislation excerpts, technical guidance, checklists, interpretation notes, rate tables, and internal research memos, assuming proper access control, data-governance review, and human validation.
 
 ---
 
@@ -468,8 +468,6 @@ The Azure version moved the demo beyond temporary notebook or Cloud Shell previe
 <a id="toc-repository-layout"></a>
 ## Repository layout
 
-Use this as the intended organized layout for GitHub. Adjust file names if your uploaded code bundle differs.
-
 ```text
 .
 ├── README.md
@@ -574,15 +572,15 @@ export BASE_DIR="$HOME/taxrag_azure_foundry/runtime"
 export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip"
 export HF_HOME="$BASE_DIR/hf_cache"
 
-export AZURE_OPENAI_ENDPOINT="https://YOUR-AZURE-OPENAI-RESOURCE.openai.azure.com"
-export AZURE_OPENAI_API_KEY="YOUR_AZURE_OPENAI_KEY"
-export AZURE_OPENAI_DEPLOYMENT="YOUR_DEPLOYMENT_NAME"
+export AZURE_OPENAI_ENDPOINT="https://AZURE-OPENAI-RESOURCE.openai.azure.com"
+export AZURE_OPENAI_API_KEY="AZURE_OPENAI_KEY"
+export AZURE_OPENAI_DEPLOYMENT="DEPLOYMENT_NAME"
 ```
 
 For AWS OpenAI mode:
 
 ```bash
-export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+export OPENAI_API_KEY="OPENAI_API_KEY"
 export OPENAI_MODEL="gpt-4.1"
 ```
 
@@ -593,7 +591,7 @@ export AWS_REGION="us-east-1"
 export BEDROCK_MODEL_ID="amazon.nova-micro-v1:0"
 ```
 
-Some accounts require an inference profile ID or ARN instead of a raw model ID. Use the value that works for your Bedrock account and region.
+Some accounts require an inference profile ID or ARN instead of a raw model ID. Use the value that works for my Bedrock account and region.
 
 ---
 
@@ -697,7 +695,7 @@ streamlit run streamlit_taxfact_app_v2.py \
 In SageMaker Studio, use the proxy URL rather than opening `0.0.0.0` directly:
 
 ```text
-https://YOUR-STUDIO-HOST.studio.us-east-1.sagemaker.aws/jupyterlab/default/proxy/8080/
+https://STUDIO-HOST.studio.us-east-1.sagemaker.aws/jupyterlab/default/proxy/8080/
 ```
 
 ---
@@ -739,9 +737,9 @@ export BASE_DIR="$HOME/taxrag_azure_foundry/runtime"
 export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip"
 export HF_HOME="$BASE_DIR/hf_cache"
 
-export AZURE_OPENAI_ENDPOINT="https://YOUR-AZURE-OPENAI-RESOURCE.openai.azure.com"
-export AZURE_OPENAI_API_KEY="YOUR_AZURE_OPENAI_KEY"
-export AZURE_OPENAI_DEPLOYMENT="YOUR_DEPLOYMENT_NAME"
+export AZURE_OPENAI_ENDPOINT="https://AZURE-OPENAI-RESOURCE.openai.azure.com"
+export AZURE_OPENAI_API_KEY="AZURE_OPENAI_KEY"
+export AZURE_OPENAI_DEPLOYMENT="DEPLOYMENT_NAME"
 ```
 
 Then run:
@@ -1108,13 +1106,13 @@ This project is a cloud-deployable proof of concept, not a production system.
 
 ---
 
-<a id="toc-future-production-path-for-income-tax-act-advisory-rag"></a>
-## Future production path for Income Tax Act Advisory RAG
+<a id="toc-future-production-path-for-corporate-tax-act-advisory-rag"></a>
+## Future production path for Corporate Tax Act Advisory RAG
 
-A more production-like version for an Income Tax Act Advisory use case would likely need:
+A more production-like version for an Corporate Tax Act Advisory use case would likely need:
 
 1. **Curated content scope**
-   - Income Tax Act sections,
+   - Corporate Tax Act sections,
    - technical interpretations,
    - internal guidance,
    - checklists,
