@@ -1,0 +1,15 @@
+numpy==2.2.6
+pandas==2.2.3
+tqdm
+python-dotenv
+sentence-transformers
+transformers>=4.37,<5.6
+accelerate
+scikit-learn
+scipy
+safetensors
+openai>=1.99.0
+azure-identity
+streamlit
+boto3
+botocore

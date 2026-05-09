@@ -1,0 +1,5 @@
+Place the RAG artifact zip here before local testing or Azure Container Apps deployment:
+
+kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip
+
+The Dockerfile expects runtime/*.zip to exist.

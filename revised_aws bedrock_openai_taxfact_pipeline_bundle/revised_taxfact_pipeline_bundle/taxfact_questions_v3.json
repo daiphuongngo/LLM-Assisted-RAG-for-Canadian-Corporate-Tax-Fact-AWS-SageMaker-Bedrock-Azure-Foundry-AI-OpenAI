@@ -1,0 +1,94 @@
+[
+  {
+    "id": "Q1",
+    "question": "What are the filing deadline and payment deadline for Federal Corporate income tax returns under Filing and Payment Deadlines?",
+    "section": "Filing and Payment Deadlines",
+    "expected_pages": [102, 103],
+    "answer_kind": "deadline",
+    "target_terms": ["Federal Corporate income tax returns", "Filing Deadline", "Payment Deadline", "CCPC", "six months", "two months", "three months"],
+    "expected_answer": "Returns are due within six months after year-end. The balance of taxes payable is due within two months after year-end. For certain CCPCs, the deadline is extended to three months."
+  },
+  {
+    "id": "Q2",
+    "question": "What are the notes for Federal Corporate income tax returns under Filing and Payment Deadlines?",
+    "section": "Filing and Payment Deadlines",
+    "expected_pages": [102, 103],
+    "answer_kind": "notes",
+    "target_terms": ["Federal Corporate income tax returns", "Notes", "2025 taxation year", "temporary interest relief", "April 2", "June 30, 2025"],
+    "expected_answer": "The corporate income tax returns for all provinces and territories, except Alberta and Quebec, follow the federal filing and payment deadlines. For the 2025 taxation year only, the federal and Quebec governments announced temporary interest relief for businesses to defer corporate income tax payments from April 2 to June 30, 2025; waive interest on corporate income tax instalment and arrears payments required to be paid between April 2 and June 30, 2025; and provide interest relief on existing corporate income tax balances between April 2 and June 30, 2025."
+  },
+  {
+    "id": "Q3",
+    "question": "What is the threshold for a general corporation under Provincial and Territorial Income Tax Instalments in Alberta?",
+    "section": "Provincial and Territorial Income Tax Instalments",
+    "expected_pages": [101],
+    "answer_kind": "value",
+    "target_terms": ["General corporation", "Alberta", "Threshold", "2,000"],
+    "expected_answer": "2,000"
+  },
+  {
+    "id": "Q4",
+    "question": "What are the notes for monthly payment by a general corporation under Provincial and Territorial Income Tax Instalments in Alberta?",
+    "section": "Provincial and Territorial Income Tax Instalments",
+    "expected_pages": [101],
+    "answer_kind": "notes",
+    "target_terms": ["Monthly instalments", "General corporation", "Alberta", "current year estimate", "prior year method", "second preceding year method"],
+    "expected_answer": "Monthly instalments must be calculated using one of the following three methods: current year estimate—1/12 of the estimated tax liability for the current year; prior year method—1/12 of the preceding year's tax liability; or second preceding year method—1/12 of the second preceding year's tax liability for the first two months, and for the remaining 10 months, 1/10 of the difference between the first instalment base and the total of the first two payments."
+  },
+  {
+    "id": "Q5",
+    "question": "What percentage is the ITC Rate on Total Expenditures up to the Expenditure Limit for Qualifying CCPCs under Federal Research and Development Tax Incentives?",
+    "section": "Federal Research and Development (R&D) Tax Incentives",
+    "expected_pages": [81],
+    "answer_kind": "value",
+    "target_terms": ["Qualifying CCPCs", "ITC Rate", "Expenditure Limit", "35%"],
+    "expected_answer": "35%",
+    "note": "Corrected from 3% to 35% based on the page 81 screenshot."
+  },
+  {
+    "id": "Q6",
+    "question": "What are the notes for the ITC Rate on Total Expenditures up to the Expenditure Limit for Qualifying CCPCs under Federal Research and Development Tax Incentives?",
+    "section": "Federal Research and Development (R&D) Tax Incentives",
+    "expected_pages": [81],
+    "answer_kind": "notes",
+    "target_terms": ["expenditure limit", "$3 million", "current expenditures", "associated corporations", "$10", "$50 million", "35%"],
+    "expected_answer": "The expenditure limit is generally $3 million and applies to current expenditures. Capital expenditures are not eligible. The expenditure limit must be shared and allocated among associated corporations. However, CCPCs that are associated due to a group of unconnected investors, such as venture capital investors, do not have to share the limit if the CRA is satisfied that the group was not formed to gain access to multiple expenditure limits. The expenditure limit is phased out for CCPCs with taxable capital employed in Canada of between $10 million and $50 million in the prior year. The expenditure limit is reduced by $0.75 for every $10 by which taxable capital exceeds $10 million. The ability to claim the 35% ITC rate and related 100% ITC refund is eliminated once prior year taxable capital exceeds $50 million."
+  },
+  {
+    "id": "Q7",
+    "question": "What is the calculation of tax for banks, loan or trust corporations, and corporations trading in securities under Quebec Compensation Tax for Financial Institutions?",
+    "section": "Quebec Compensation Tax for Financial Institutions",
+    "expected_pages": [80],
+    "answer_kind": "value",
+    "target_terms": ["Banks", "loan or trust corporations", "corporations trading in securities", "Calculation of Tax", "2.80%"],
+    "expected_answer": "2.80%"
+  },
+  {
+    "id": "Q8",
+    "question": "What are the notes for calculation of tax under Quebec Compensation Tax for Financial Institutions?",
+    "section": "Quebec Compensation Tax for Financial Institutions",
+    "expected_pages": [80],
+    "answer_kind": "notes",
+    "target_terms": ["insurance corporations", "premiums payable", "Quebec wages"],
+    "expected_answer": "For insurance corporations, the percentages noted in the table apply to premiums payable. For all other entities, the percentages apply to Quebec wages."
+  },
+  {
+    "id": "Q9",
+    "question": "What is the 2025 Federal Part VI tax rate under Capital Tax Rates—Financial Institutions?",
+    "section": "Capital Tax Rates—Financial Institutions",
+    "expected_pages": [78],
+    "answer_kind": "value",
+    "target_terms": ["Federal Part VI Tax", "2025", "Tax rates", "1.25%"],
+    "expected_answer": "1.25%",
+    "note": "Question revised to ask for the 2025 tax rate. If asking for capital deduction/exemption, expected answer would be $1 billion."
+  },
+  {
+    "id": "Q10",
+    "question": "What are the notes for Federal Part VI Tax under Capital Tax Rates—Financial Institutions?",
+    "section": "Capital Tax Rates—Financial Institutions",
+    "expected_pages": [78],
+    "answer_kind": "notes",
+    "target_terms": ["Part VI", "holding companies", "income tax payable under Part I"],
+    "expected_answer": "Financial institutions for Part VI tax purposes also include certain holding companies. The amount of Part VI capital tax payable is reduced by the corporation's income tax payable under Part I."
+  }
+]
