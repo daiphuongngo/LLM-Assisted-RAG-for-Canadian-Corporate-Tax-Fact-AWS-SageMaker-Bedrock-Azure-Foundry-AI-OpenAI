@@ -1,404 +1,1259 @@
-# LLM-Assisted RAG for Domain-Specific QA over Canadian Corporate Tax Fact Documents
+# **LLM-Assisted Source-Grounded RAG for Domain-Specific QA over Canadian Corporate Tax Fact Documents using Google Colab v1-v5.2, AWS SageMaker / Bedrock / OpenAI, and Azure Foundry AI / Azure OpenAI / Docker / Azure Container Apps **
 
 ![Harvard_University_logo svg](https://github.com/user-attachments/assets/cf1e57fb-fe56-4e09-9a8b-eb8a87343825)
 
 ![Harvard-Extension-School](https://github.com/user-attachments/assets/59ea7d94-ead9-47c0-b29f-f29b14edc1e0)
 
-## **Master, Data Science**
+---
 
-## **CSCI E-222 Foundations of Large Language Models — Final Project**
+<a id="toc-author-and-course-context"></a>
+## Author and course context
 
-## Professor: Dmitry V. Kurochkin, PhD
-
-Senior Research Analyst, Faculty of Arts and Sciences Office for Faculty Affairs, Harvard University
-
-[Demo Video](#) · [Slides](#) · [Notebook / Main Entry Point](#) · [AWS Extension Notes](#)
-
-## Author: **Dai-Phuong Ngo (Liam)**
-
-## Youtube:
-
-
-## Overview
-
-This repository is the public project page for my CSCI E-222 final project. The project focuses on **retrieval-augmented question answering** over **Canadian corporate tax fact documents**. Instead of treating the LLM as a free-form chatbot, I designed the system to retrieve relevant evidence first, then generate grounded answers tied to that evidence. That design choice became the central theme of the project: in a specialized domain like corporate tax, retrieval quality, source control, and answer discipline matter more than surface fluency. The course requirements explicitly frame the final project as a **technology demonstration and tutorial**, not a research paper, and require a working LLM-based system, a reproducible workflow, a software demo, and at least one visualization.  
-
-I developed the project iteratively from **v1** through **v5.2**, using smaller evaluation sets for fast iteration and a larger 50-question benchmark for the final consolidated version. I then extended the project to **AWS SageMaker AI Studio** and built a lightweight **Streamlit chatbot wrapper** as a deployment-oriented demo surface. The public repository is therefore both a final project write-up and a practical engineering record of how the system evolved from notebook experimentation into a more portable RAG workflow. 
+**Developer:** Dai-Phuong Ngo (Liam)  
+**Course:** CSCI E-222 Foundations of Large Language Models  
+**Program:** Master of Liberal Arts in Extension Studies, Data Science  
+**Institution:** Harvard Extension School, Harvard University  
+**Professor:** Dmitry V. Kurochkin, PhD  
 
 ---
 
-# Executive Summary
+<a id="toc-project-links"></a>
+## Project links
 
-This project answers a simple but important question:
-
-> How can I build a domain-specific LLM workflow that answers Canadian corporate tax questions accurately, concisely, and with explicit source grounding?
-
-The final system is a **hybrid RAG pipeline** that combines chunked document retrieval, dense embeddings, BM25-style lexical retrieval, reranking, and controlled answer generation. The reconstructed v5.2 artifact bundle shows a final configuration built around **BAAI/bge-small-en-v1.5** for embeddings, **cross-encoder/ms-marco-MiniLM-L-6-v2** for reranking, and **Qwen/Qwen2.5-1.5B-Instruct** for the local LLM path, with **2,016 chunks** and an embedding matrix of **(2016, 384)**. The same bundle reports strong 50-question benchmark results: **top-1 retrieval hit rate 0.98**, **top-k retrieval hit rate 1.00**, **baseline answer hit rate 0.30**, **final answer hit rate 1.00**, **citation hit rate 1.00**, **exact-mode rate 0.92**, and **verifier-supported rate 1.00**.  
-
-Those results make the main conclusion very clear: by the time the project reached v5.2, the retrieval-and-grounding workflow was doing the real work. The system was no longer just “using an LLM.” It was using the LLM inside a constrained evidence pipeline that substantially outperformed a weaker baseline on the benchmark set. 
-
----
-
-# Abstract
-
-I built a domain-specific Retrieval-Augmented Generation system for question answering over Canadian corporate tax fact documents. The motivation for the project was practical: corporate tax information is document-heavy, terminology-heavy, and not well suited to unsupported free-form LLM responses. In that kind of environment, a generic answer that sounds plausible is often more dangerous than an answer that is slower but grounded.
-
-The project evolved through several versions from **v1** to **v5.2**. Early versions established the basic ingestion and retrieval loop. Later versions improved chunking, metadata handling, ranking, reranking, answer control, and evaluation discipline. The final reconstructed v5.2 artifact summary shows a mature hybrid configuration with 2,016 chunks, a 384-dimensional embedding space and strong benchmark performance across retrieval, answer accuracy, and citation alignment. 
-
-After completing the main Colab/Python workflow, I extended the project to **AWS SageMaker AI Studio**. The preflight stage successfully ported the v5.2 artifact-driven pipeline into AWS, loading the observed configuration, full chunk set, and embedding matrix. On a small CPU-only Studio instance, however, the full local Qwen path was too resource-constrained: the 3.09 GB weights file downloaded, but the process was killed during model loading. That result was still useful, because it showed that the workflow itself was portable, even though full local inference required stronger compute. I then built a lightweight Streamlit chatbot wrapper to make the retrieval-first pipeline easier to demo in an interface-oriented format.  
+| Item | Link |
+|---|---|
+| GitHub repository | https://github.com/daiphuongngo/LLM-Assisted-RAG-for-Canadian-Corporate-Tax-Fact-AWS-SageMaker-Bedrock-Azure-Foundry-AI-OpenAI |
+| Streamlit demo | https://taxrag-streamlit.icyforest-f8f8706c.eastus.azurecontainerapps.io |
+| YouTube demo | https://www.youtube.com/watch?v=0XbW2nOOz7g |
+| Public data source | KPMG Canada Tax Facts 2025-2026: https://kpmg.com/ca/en/services/tax/tax-facts.html |
 
 ---
 
-# Table of Contents
+<a id="table-of-contents"></a>
+## Table of contents
 
-* [Problem Statement](#problem-statement)
-* [Why This Project Matters](#why-this-project-matters)
-* [Data Source and Scope](#data-source-and-scope)
-* [System Architecture](#system-architecture)
-* [Version History](#version-history)
-* [Final v5.2 Configuration](#final-v52-configuration)
-* [Experiments and Results](#experiments-and-results)
-* [AWS Extension](#aws-extension)
-* [Streamlit Chatbot Demo](#streamlit-chatbot-demo)
-* [Implementation Details](#implementation-details)
-* [How to Run](#how-to-run)
-* [Discussion](#discussion)
-* [Limitations and Responsible Use](#limitations-and-responsible-use)
-* [Future Work](#future-work)
+Click any section title below to jump directly to that part of the README.
+
+- [Project links](#toc-project-links)
+- [Author and course context](#toc-author-and-course-context)
+- [Executive summary](#toc-executive-summary)
+- [Why this matters for Corporate / Income Tax Advisory](#toc-why-this-matters-for-corporate-income-tax-advisory)
+- [Problem statement](#toc-problem-statement)
+- [Data source and artifact](#toc-data-source-and-artifact)
+  - [Preserved artifact properties](#toc-preserved-artifact-properties)
+  - [Data-source caution](#toc-data-source-caution)
+- [Data challenge: tax facts are structured data inside documents](#toc-data-challenge-tax-facts-are-structured-data-inside-documents)
+- [High-level architecture](#toc-high-level-architecture)
+- [Whole pipeline evolution](#toc-whole-pipeline-evolution)
+  - [Phase 1 — Google Colab no-LLM / local retrieval engineering](#toc-phase-1-google-colab-no-llm-local-retrieval-engineering)
+  - [Phase 2 — AWS SageMaker Streamlit hosted modes](#toc-phase-2-aws-sagemaker-streamlit-hosted-modes)
+  - [Phase 3 — Azure Foundry AI + Docker + Azure Container Apps](#toc-phase-3-azure-foundry-ai-plus-docker-plus-azure-container-apps)
+- [Supported runtime modes](#toc-supported-runtime-modes)
+  - [AWS modes](#toc-aws-modes)
+  - [Azure modes](#toc-azure-modes)
+- [Technologies used](#toc-technologies-used)
+  - [Core RAG / ML technologies](#toc-core-rag-ml-technologies)
+  - [AWS technologies](#toc-aws-technologies)
+  - [Azure technologies](#toc-azure-technologies)
+- [Techniques used](#toc-techniques-used)
+- [Repository layout](#toc-repository-layout)
+- [Setup: common environment variables](#toc-setup-common-environment-variables)
+- [Run on AWS SageMaker Studio / JupyterLab](#toc-run-on-aws-sagemaker-studio-jupyterlab)
+  - [1. Create and activate a Python environment](#toc-1-create-and-activate-a-python-environment)
+  - [2. Set AWS paths](#toc-2-set-aws-paths)
+  - [3. Run no-LLM evidence baseline](#toc-3-run-no-llm-evidence-baseline)
+  - [4. Run AWS OpenAI mode](#toc-4-run-aws-openai-mode)
+  - [5. Run AWS Bedrock mode](#toc-5-run-aws-bedrock-mode)
+  - [6. Compare AWS benchmark runs](#toc-6-compare-aws-benchmark-runs)
+  - [7. Run AWS Streamlit app](#toc-7-run-aws-streamlit-app)
+- [Run on Azure Foundry AI / Azure OpenAI](#toc-run-on-azure-foundry-ai-azure-openai)
+  - [1. Prepare workspace](#toc-1-prepare-workspace)
+  - [2. Install dependencies](#toc-2-install-dependencies)
+  - [3. Set environment variables](#toc-3-set-environment-variables)
+  - [4. Test Azure OpenAI directly](#toc-4-test-azure-openai-directly)
+  - [5. Run smoke tests](#toc-5-run-smoke-tests)
+  - [6. Run Azure no-LLM and Azure OpenAI benchmark](#toc-6-run-azure-no-llm-and-azure-openai-benchmark)
+  - [7. Run Azure Streamlit locally](#toc-7-run-azure-streamlit-locally)
+- [Deploy Azure Streamlit app to Azure Container Apps](#toc-deploy-azure-streamlit-app-to-azure-container-apps)
+- [Evaluation](#toc-evaluation)
+  - [Preserved v5.2 benchmark](#toc-preserved-v5-2-benchmark)
+  - [Revised cloud benchmark](#toc-revised-cloud-benchmark)
+  - [Recommended evaluation dimensions](#toc-recommended-evaluation-dimensions)
+- [Q6 intentional trap / negative-control test](#toc-q6-intentional-trap-negative-control-test)
+  - [Trap design](#toc-trap-design)
+  - [What happened](#toc-what-happened)
+  - [Why this matters](#toc-why-this-matters)
+- [Cost model: tokens, not PDF pages](#toc-cost-model-tokens-not-pdf-pages)
+  - [Answer-time cost formula](#toc-answer-time-cost-formula)
+  - [What counts as input tokens?](#toc-what-counts-as-input-tokens)
+  - [What counts as output tokens?](#toc-what-counts-as-output-tokens)
+  - [What is not token-billed as an LLM call in this prototype?](#toc-what-is-not-token-billed-as-an-llm-call-in-this-prototype)
+  - [Production measurement plan](#toc-production-measurement-plan)
+- [Streamlit demo flow](#toc-streamlit-demo-flow)
+- [Safety and responsible-use controls](#toc-safety-and-responsible-use-controls)
+- [Production-readiness status](#toc-production-readiness-status)
+  - [Present in prototype](#toc-present-in-prototype)
+  - [Missing for production](#toc-missing-for-production)
+- [Future production path for Income Tax Act Advisory RAG](#toc-future-production-path-for-income-tax-act-advisory-rag)
+- [Troubleshooting](#toc-troubleshooting)
+  - [The app says the artifact cannot be found](#toc-the-app-says-the-artifact-cannot-be-found)
+  - [Azure OpenAI direct call fails](#toc-azure-openai-direct-call-fails)
+  - [Streamlit works locally but not in Azure Container Apps](#toc-streamlit-works-locally-but-not-in-azure-container-apps)
+  - [Bedrock mode returns access denied](#toc-bedrock-mode-returns-access-denied)
+  - [Exact score is low even though answer looks correct](#toc-exact-score-is-low-even-though-answer-looks-correct)
+- [Project achievements](#toc-project-achievements)
+- [License and use](#toc-license-and-use)
 
 ---
 
-# Problem Statement
+<a id="toc-executive-summary"></a>
+## Executive summary
 
-The problem I address in this project is **document-grounded domain-specific question answering**. More specifically, I wanted to answer corporate tax questions using a curated corpus of Canadian corporate tax fact documents, while minimizing unsupported answers and preserving explicit evidence support.
+This project answers a practical question:
 
-This project is not meant to be a generic assistant or an open-ended tax advisor. It is a **RAG system for focused, source-grounded QA**. That framing matches the course requirements very closely: the assignment explicitly identifies **document question answering with RAG** and **conversational agents** as valid LLM project types, and it requires a clear problem statement, a data source, an LLM-based solution, a working software demonstration, and a meaningful visualization.  
+> How can I build a domain-specific LLM workflow that answers Canadian corporate tax-fact questions accurately, concisely, and with visible source grounding?
+
+The system follows one core design principle:
+
+```text
+Retrieval first, LLM second.
+```
+
+Instead of asking a general chatbot to answer tax questions from memory, the system:
+
+1. loads a prepared v5.2 tax RAG artifact,
+2. retrieves relevant chunks from the artifact,
+3. reranks and selects evidence,
+4. optionally sends only the selected evidence to a hosted LLM,
+5. returns a concise answer with cited pages and visible evidence.
+
+The final project compares a retrieval-only evidence baseline with hosted LLM answer generation across AWS and Azure:
+
+- **Google Colab v1-v5.2:** no-LLM / local retrieval engineering, chunking, metadata, reranking, and benchmarking.
+- **AWS SageMaker Streamlit:** `no_llm`, `openai`, and `bedrock` modes over the same v5.2 evidence artifact.
+- **Azure Foundry AI / Azure OpenAI:** `no_llm` and `azure_openai` modes in a Streamlit app.
+- **Azure deployment:** Docker + Azure Container Registry + Azure Container Apps for a stable HTTPS demo.
+
+The key result is that the retrieval layer became the strongest part of the system. The preserved v5.2 artifact achieved:
+
+| Metric | Result |
+|---|---:|
+| Top-k retrieval hit rate | 1.00 |
+| Top-1 retrieval hit rate | 0.98 |
+| Final answer hit rate | 1.00 |
+| Citation hit rate | 1.00 |
+| Exact-mode rate | 0.92 |
+| Verifier-supported rate | 1.00 |
+
+The current cloud benchmark shows that the system consistently finds the correct evidence pages across no-LLM, AWS OpenAI, AWS Bedrock, and Azure OpenAI modes. Hosted LLMs improve answer synthesis, but only because the retrieval layer first selects the relevant source evidence.
 
 ---
 
-# Why This Project Matters
+<a id="toc-why-this-matters-for-corporate-income-tax-advisory"></a>
+## Why this matters for Corporate / Income Tax Advisory
 
-Large language models are strongest when they are integrated into workflows that control their knowledge boundaries. In a specialized document domain like tax, the primary challenge is not text generation by itself. The real challenge is selecting the right evidence, suppressing hallucinations, and producing concise answers that can be traced back to source material.
+Tax-advisory work depends on facts that are often buried in PDFs, tables, footnotes, jurisdiction rows, dates, thresholds, and narrow exceptions. A fluent model can still be wrong if it selects the wrong province, year, table row, threshold, rate, or numbered note.
 
-That is why I chose a **retrieval-first design**. By forcing the system to retrieve supporting evidence before answering, I made the project less about unconstrained generation and more about practical information access. In other words, I treated the LLM as one component in a controlled reasoning-and-evidence workflow.
+This project is designed around a practical advisory workflow:
+
+```text
+Ask a tax-fact question
+        ↓
+Retrieve the likely source page / table row / note
+        ↓
+Show the retrieved evidence
+        ↓
+Optionally summarize with a hosted LLM
+        ↓
+Advisor reviews the source and final wording
+```
+
+The advisory value is not:
+
+```text
+AI replaces tax research.
+```
+
+The advisory value is:
+
+```text
+AI gets the team to the right source faster, while keeping evidence visible for review.
+```
+
+For an Income Tax Act Advisory LLM + RAG project, the same architecture can be adapted to approved internal knowledge sources, such as curated legislation excerpts, technical guidance, checklists, interpretation notes, rate tables, and internal research memos, assuming proper access control, data-governance review, and human validation.
 
 ---
 
-# Data Source and Scope
+<a id="toc-problem-statement"></a>
+## Problem statement
 
-The system was built for **Canadian corporate tax fact documents** used as the authoritative retrieval corpus for the project. In the working project, those documents were used for chunk creation, indexing, retrieval, reranking, answer support, and evaluation. In the public repository, I focus on the **method, code structure, reconstructed artifacts, AWS extension scripts, and demo interface**, rather than redistributing the full source document set.
+This project addresses the task:
 
-This design choice is intentional and aligned with the project requirements. The course requires a usable data source and reproducible instructions, but it also explicitly notes that full datasets larger than 10 MB should not simply be uploaded when links and instructions are more appropriate. It also emphasizes public-shareable code and materials. In that context, the repository is structured as a reusable engineering artifact rather than as a direct content redistribution package. 
+> Given a Canadian corporate tax-fact question, retrieve the relevant source evidence and generate a concise, source-grounded answer only from that evidence.
+
+The system is **not** a general tax-advice engine. It is a research-assistance prototype that answers focused fact questions from an indexed source corpus.
+
+Good target questions include:
+
+```text
+What is the threshold for a general corporation in Alberta?
+What is the 2025 Federal Part VI tax rate?
+What is the R&D ITC rate?
+What are the filing and payment deadlines for a corporate tax return?
+What are the notes for R&D investment tax credits?
+```
+
+Poor target questions include:
+
+```text
+Should my company take this tax position?
+How should a client restructure its transactions?
+What is the best tax plan for a specific fact pattern?
+```
+
+Those advisory questions require professional judgment, client-specific facts, and human review. This prototype supports source lookup and summarization only.
 
 ---
 
-# System Architecture
+<a id="toc-data-source-and-artifact"></a>
+## Data source and artifact
 
-The final project follows a staged RAG architecture:
+The public source used for the project is:
+
+```text
+KPMG Canada Tax Facts 2025-2026
+https://kpmg.com/ca/en/services/tax/tax-facts.html
+```
+
+The prepared artifact used by the cloud code is expected to be named something like:
+
+```text
+kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip
+```
+
+If the local artifact has a different timestamp, set the environment variable to the exact file path:
+
+```bash
+export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T190302Z-1-001.zip"
+```
+
+<a id="toc-preserved-artifact-properties"></a>
+### Preserved artifact properties
+
+| Artifact property | Observed value |
+|---|---:|
+| Chunks | 2,016 |
+| Embedding dimension | 384 |
+| Embedding model | `BAAI/bge-small-en-v1.5` |
+| Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
+| Local v5.2 answer path | `Qwen/Qwen2.5-1.5B-Instruct` |
+| AWS hosted answer paths | OpenAI and Amazon Bedrock Nova Micro |
+| Current Azure hosted answer path | Azure OpenAI GPT-4.1 through Azure Foundry AI |
+| UI | Streamlit |
+| Azure packaging | Docker image deployed to Azure Container Apps |
+
+<a id="toc-data-source-caution"></a>
+### Data-source caution
+
+Do **not** commit proprietary, confidential, client-specific, internal-only, or secret-bearing documents to GitHub. This public repository should contain code, sample instructions, screenshots, and small non-sensitive artifacts only.
+
+---
+
+<a id="toc-data-challenge-tax-facts-are-structured-data-inside-documents"></a>
+## Data challenge: tax facts are structured data inside documents
+
+A tax fact PDF is not just a sequence of paragraphs. Many correct answers live inside:
+
+- tables,
+- row-level values,
+- footnotes,
+- numbered notes,
+- jurisdiction-specific rows,
+- filing deadlines,
+- effective dates,
+- exceptions and temporary relief language.
+
+A simple chunking strategy can retrieve the correct page but still lose the exact row or note. For this reason, the preprocessing step preserves:
+
+- printed page numbers,
+- section titles,
+- content type,
+- table context,
+- row context,
+- note metadata,
+- candidate value strings.
+
+This is why the project is retrieval-first. The LLM is useful only after the source structure has been preserved well enough for retrieval and review.
+
+---
+
+<a id="toc-high-level-architecture"></a>
+## High-level architecture
 
 ```mermaid
 flowchart LR
-    A[Source Documents] --> B[Preprocessing and Chunking]
-    B --> C[Hybrid Retrieval]
-    C --> D[Dense Scoring]
-    C --> E[BM25 Scoring]
-    C --> F[Metadata Scoring]
-    D --> G[Reranker]
-    E --> G
-    F --> G
-    G --> H[Top-K Evidence]
-    H --> I[Controlled Answer Generation]
-    I --> J[Answer + Citations]
+    A[Tax Facts PDF / Artifact Zip] --> B[Logical Pages + Chunks + Metadata]
+    B --> C[Local Dense Retrieval]
+    B --> D[BM25 Lexical Retrieval]
+    B --> E[Metadata Boosting]
+    C --> F[Candidate Pool]
+    D --> F
+    E --> F
+    F --> G[Cross-Encoder Reranker]
+    G --> H[Top Evidence Snippets]
+    H --> I{Answer Mode}
+    I -->|no_llm| J[Evidence-Only Result]
+    I -->|OpenAI / Bedrock / Azure OpenAI| K[Hosted LLM Synthesis]
+    J --> L[Answer + Pages + Evidence]
+    K --> L
 ```
 
-The core idea is simple:
+At answer time, the model does **not** read the whole PDF directly. It receives:
 
-1. preprocess and chunk the document corpus,
-2. retrieve candidate chunks using multiple signals,
-3. rerank the candidates,
-4. build the answer from the selected evidence,
-5. keep the answer tied to source support.
+- system instructions,
+- user question,
+- selected evidence chunks,
+- snippet text,
+- metadata,
+- citations / page references,
+- optionally prior chat context.
 
-By v5.2, the system had become much more than a basic “retrieve text and ask a model” loop. It had become a retrieval pipeline with deliberate weighting, chunk typing, reranking, and benchmark-driven validation. The v5.2 artifact bundle confirms that the final hybrid system combined dense, BM25, metadata, and reranker signals rather than relying on a single retrieval strategy. 
-
----
-
-# Version History
-
-## v1 — First end-to-end proof of concept
-
-Version 1 established the basic workflow: ingest documents, chunk the corpus, retrieve candidate evidence, and generate an answer. At this stage, the project was proving feasibility rather than performance. The system could answer questions, but retrieval quality and answer control were still rough.
-
-## v2 — Retrieval cleanup and better evidence targeting
-
-Version 2 improved the retrieval behavior and reduced obvious mismatch between the retrieved evidence and the final answer. This stage helped me identify that in this project, answer quality would depend heavily on chunk quality and ranking quality.
-
-## v4 — Structural improvements and better grounding
-
-Version 4 represented a more mature architectural stage. I paid more attention to chunk types, metadata, and evidence formatting so the system could retrieve not just text, but **useful answerable units**.
-
-## v5 — Stronger ranking and answer discipline
-
-Version 5 moved the project closer to a production-style RAG workflow. Retrieval, reranking, and answer generation were treated as connected components, not isolated steps.
-
-## v5.1 — Broader benchmark testing
-
-Version 5.1 expanded beyond smaller 20-question testing into a 50-question benchmark view. This was important because a system that looks good on a tiny set can still be fragile. The broader evaluation helped validate whether the improvements generalized.
-
-## v5.2 — Final consolidated system
-
-Version 5.2 became the final release candidate. It integrated hybrid retrieval, reranking, controlled answering, and stronger evaluation support into the most stable form of the project.
+This means answer-time LLM cost is based on selected prompt tokens and output tokens, not the full PDF page count.
 
 ---
 
-# Final v5.2 Configuration
+<a id="toc-whole-pipeline-evolution"></a>
+## Whole pipeline evolution
 
-The reconstructed v5.2 artifact bundle reports the following observed configuration:
+The project evolved in three major phases.
 
-* **Embedding model:** `BAAI/bge-small-en-v1.5`
-* **Reranker:** `cross-encoder/ms-marco-MiniLM-L-6-v2`
-* **LLM:** `Qwen/Qwen2.5-1.5B-Instruct`
-* **4-bit loading:** enabled in the original observed configuration
-* **Dense weight:** `0.44`
-* **BM25 weight:** `0.18`
-* **Metadata weight:** `0.23`
-* **Rerank weight:** `0.15`
-* **Dense top-k:** `28`
-* **BM25 top-k:** `28`
-* **Rerank top-k:** `14`
-* **Final top-k:** `6`
-* **Number of chunks:** `2016`
-* **Embedding matrix shape:** `(2016, 384)` 
+<a id="toc-phase-1-google-colab-no-llm-local-retrieval-engineering"></a>
+### Phase 1 — Google Colab no-LLM / local retrieval engineering
 
-The chunk-type distribution was:
+| Stage | Focus | Main lesson |
+|---|---|---|
+| Colab v1-v2 | PDF parsing, early chunks, baseline retrieval | Flat chunks lose table and note context. |
+| Colab v3-v4 | Evaluation expansion and layout-aware RAG | Page, section, and row metadata matter. |
+| Colab v5-v5.2 | Best retrieval artifact | Hybrid retrieval + metadata scoring + reranking improved grounding. |
 
-* **heading:** 46
-* **text:** 112
-* **table:** 243
-* **row:** 1615 
+<a id="toc-phase-2-aws-sagemaker-streamlit-hosted-modes"></a>
+### Phase 2 — AWS SageMaker Streamlit hosted modes
 
-This breakdown is one of the most important technical details in the final project. It reflects a document representation strategy that distinguishes between headings, running text, tables, and row-level units instead of flattening the corpus into generic paragraphs.
+| Mode | Role |
+|---|---|
+| `no_llm` | Evidence-only baseline; confirms whether retrieval finds the right page before synthesis. |
+| `openai` | Hosted answer synthesis over the same selected evidence. |
+| `bedrock` | AWS-native hosted model path using Amazon Bedrock Nova Micro / Converse API. |
 
----
+The AWS phase showed that the same evidence artifact could run in SageMaker and support multiple answer-generation modes. It also showed why hosted LLMs are practical: local Qwen loading was too heavy for a small CPU-only Studio space, while hosted generation avoided local model loading.
 
-# Experiments and Results
+<a id="toc-phase-3-azure-foundry-ai-plus-docker-plus-azure-container-apps"></a>
+### Phase 3 — Azure Foundry AI + Docker + Azure Container Apps
 
-## Quantitative Results
+| Component | Role |
+|---|---|
+| Azure Foundry AI / Azure OpenAI | GPT-4.1 hosted answer generation. |
+| Streamlit | User interface for no-LLM and Azure OpenAI modes. |
+| Docker | Packages app code, dependencies, startup command, and artifact path. |
+| Azure Container Registry | Builds and stores the container image. |
+| Azure Container Apps | Provides stable HTTPS deployment for the Streamlit app. |
 
-The final reconstructed v5.2 summary reports the following 50-question benchmark results:
-
-* **Questions evaluated:** 50
-* **Top-1 retrieval hit rate:** 0.98
-* **Top-k retrieval hit rate:** 1.00
-* **Baseline answer hit rate:** 0.30
-* **Final answer hit rate:** 1.00
-* **Citation hit rate:** 1.00
-* **Exact-mode rate:** 0.92
-* **Verifier-supported rate:** 1.00 
-
-## Result Interpretation
-
-These results tell a very strong story.
-
-The final retrieval system was extremely reliable on the benchmark. A **top-1 retrieval hit rate of 0.98** means that almost every question had the correct evidence at rank 1, and a **top-k retrieval hit rate of 1.00** means the correct evidence was always present somewhere in the retrieved set. That indicates that by v5.2, the retrieval side of the system had reached a very mature state. 
-
-The difference between the **baseline answer hit rate (0.30)** and the **final answer hit rate (1.00)** shows the actual value of the full RAG architecture. This was not a small incremental improvement. It was a major shift from a weak baseline to a highly effective retrieval-grounded answer pipeline on the benchmark. The **citation hit rate of 1.00** and **verifier-supported rate of 1.00** further support the claim that the final system was not simply answering correctly by chance, but doing so with source support. 
-
-## Visualization
-
-The course requires at least one meaningful visualization, such as metric comparisons, qualitative comparisons, or embedding/structure visualizations. 
-
-The most effective visualization for this project is a **version comparison chart** that shows how answer quality and retrieval quality improved over time. The chart I recommend for this repository is a grouped bar chart comparing:
-
-* baseline answer hit rate,
-* final answer hit rate,
-* citation hit rate,
-* and exact-mode rate.
-
-A second strong visualization is a **qualitative side-by-side comparison** showing:
-
-* a question,
-* the retrieved chunks,
-* the final answer,
-* and the citation support.
-
-Add both to the README if possible.
+The Azure version moved the demo beyond temporary notebook or Cloud Shell preview URLs and into a stable containerized web app.
 
 ---
 
-# AWS Extension
+<a id="toc-supported-runtime-modes"></a>
+## Supported runtime modes
 
-After finishing the main Colab/Python workflow, I extended the project to **AWS SageMaker AI Studio** as an additional engineering and deployment exercise.
+<a id="toc-aws-modes"></a>
+### AWS modes
 
-The most important AWS success was the **preflight** stage. In SageMaker Studio, the patched v5.2 workflow successfully:
+| Mode | Backend | What it does | Requires cloud key / permission? |
+|---|---|---|---|
+| `no_llm` | Retrieval-only baseline | Retrieves evidence and returns safe baseline/evidence output. | No |
+| `openai` | OpenAI API from AWS/SageMaker runtime | Uses retrieved evidence and calls OpenAI for final answer generation. | Yes, `OPENAI_API_KEY` |
+| `bedrock` | Amazon Bedrock Runtime Converse API | Uses retrieved evidence and calls a Bedrock model such as Amazon Nova. | Yes, IAM permission for Bedrock |
 
-* extracted the artifact bundle,
-* loaded the observed run configuration,
-* loaded all **2,016 chunks**,
-* loaded the **(2016, 384)** embedding matrix,
-* and reproduced the stored evaluation summary.  
+<a id="toc-azure-modes"></a>
+### Azure modes
 
-That result matters because it proves that the pipeline was not dependent on Colab alone. The system’s artifact-driven design was portable enough to run in a managed AWS notebook environment.
-
-At the same time, AWS exposed a real compute limitation. On a small CPU-backed SageMaker space, the full local Qwen path downloaded the **3.09 GB** `model.safetensors` file and then the process was killed during model loading. That means the workflow itself was portable, but the local inference configuration required stronger resources than the smallest Studio runtime could provide. This was a valuable engineering lesson, not a failure of the project. It showed the difference between **workflow portability** and **resource adequacy**. 
-
----
-
-# Streamlit Chatbot Demo
-
-<img width="2549" height="1291" alt="Streamlit interface" src="https://github.com/user-attachments/assets/c7170762-fae1-439e-b616-5b9bbbb208a3" />
-
-As a deployment-oriented extension, I wrapped the reconstructed v5.2 backend in a lightweight **Streamlit chatbot application**. The app bundle included:
-
-* `app.py`
-* `rag_core.py`
-* `kpmg_tax_rag_v52_aws.py`
-* `Dockerfile`
-* `requirements.app.txt`
-* deployment templates for an App Runner-style path. 
-
-The purpose of the chatbot wrapper was not to reproduce the heaviest full local model pipeline on a modest Studio instance. Instead, it was to provide a **lightweight web-facing demo** for the retrieval-first workflow. During that process, I had to solve several practical engineering issues:
-
-* folder and runtime path assumptions,
-* a `pandas` / `streamlit` version conflict,
-* and a SageMaker-specific permission issue caused by the default `BASE_DIR` path falling back to `"/app"`. The corresponding Streamlit traceback clearly shows the `PermissionError` on `'/app'` and the line in `rag_core.py` where that path was being created.  
-
-This extension mattered because it translated the project from “a working notebook pipeline” into “a lightweight application surface.” Even though the backend remained the real core of the project, the Streamlit wrapper made the system easier to present, test, and reason about as a user-facing demo.
+| Mode | Backend | What it does | Requires cloud key / permission? |
+|---|---|---|---|
+| `no_llm` | Retrieval-only baseline | Retrieves evidence and returns safe baseline/evidence output. | No |
+| `azure_openai` | Azure OpenAI through Azure Foundry AI | Uses retrieved evidence and calls an Azure OpenAI deployment for final answer generation. | Yes, Azure endpoint/key/deployment |
 
 ---
 
-# Implementation Details
+<a id="toc-technologies-used"></a>
+## Technologies used
 
-The project was built in Python and uses the kind of modern LLM tooling the course explicitly calls for: standard deep learning libraries, Hugging Face model tooling, and reproducible scripts/notebooks. The assignment also requires a **single coherent working demo**, clear run instructions, organized code, and reproducible setup details. This repository is structured around that expectation.  
+<a id="toc-core-rag-ml-technologies"></a>
+### Core RAG / ML technologies
 
-The implementation now exists in three related layers:
+| Technology | Role |
+|---|---|
+| Python | Main implementation language. |
+| Streamlit | Interactive demo UI. |
+| NumPy | Loads local embedding matrix such as `chunk_embeddings.npy`. |
+| pandas | Benchmark result analysis and comparison. |
+| scikit-learn / SciPy | Similarity, metrics, and numerical utilities. |
+| sentence-transformers | Local embedding and reranking model support. |
+| Hugging Face Transformers | Supports original local model pipeline and embedding/reranker tooling. |
+| `BAAI/bge-small-en-v1.5` | Local dense embedding model used in the v5.2 artifact. |
+| BM25 | Lexical retrieval component. |
+| `cross-encoder/ms-marco-MiniLM-L-6-v2` | Local reranker used to improve final evidence ordering. |
+| JSON / JSONL | Stores logical pages, chunks, benchmark artifacts, logs, and model results. |
 
-## 1. Core notebook / Python workflow
+<a id="toc-aws-technologies"></a>
+### AWS technologies
 
-This is the original experimental and evaluation environment, developed primarily in notebook/Python form.
+| AWS technology | Used? | Role |
+|---|---:|---|
+| Amazon SageMaker Studio / JupyterLab | Yes | AWS development and demo environment. |
+| SageMaker Studio proxy | Yes | Used to open Streamlit from JupyterLab. |
+| Amazon Bedrock | Yes | Hosted LLM backend for AWS `bedrock` mode. |
+| Bedrock Converse API | Yes | Sends system/user messages and retrieved evidence to Bedrock. |
+| Amazon Nova Micro / Lite | Yes | Example AWS-native hosted model path. |
+| boto3 / botocore | Yes | AWS SDK support for Bedrock and optional S3 helpers. |
+| IAM execution role | Yes | SageMaker role must be able to invoke Bedrock. |
+| Amazon S3 | Optional | Local artifact zip is enough for demo; code can support cloud sync. |
 
-## 2. AWS portability layer
+<a id="toc-azure-technologies"></a>
+### Azure technologies
 
-This layer includes patched scripts and AWS-oriented runtime configuration so the artifact workflow can be tested in SageMaker Studio.
-
-## 3. Demo layer
-
-This layer includes the Streamlit wrapper and deployment-oriented files for a more application-like presentation of the retrieval-first QA system.
+| Azure technology | Used? | Role |
+|---|---:|---|
+| Azure Foundry AI / Azure OpenAI | Yes | Hosted LLM backend for `azure_openai` mode. |
+| Azure OpenAI GPT-4.1 deployment | Yes | Final Azure answer-generation model. |
+| OpenAI Python SDK against Azure endpoint | Yes | Calls Azure OpenAI using endpoint/deployment values. |
+| Docker | Yes | Packages the Azure Streamlit app. |
+| Azure Container Registry | Yes | Builds and stores the container image. |
+| Azure Container Apps | Yes | Hosts Streamlit as a stable web app. |
+| Azure CLI | Yes | Deploy, update, log, and cleanup scripts. |
+| Azure Container Apps secrets | Yes | Stores runtime secrets such as Azure OpenAI key. |
+| Azure AI Search | No | Recommended future improvement. |
+| Azure Blob Storage | No | Recommended future improvement for larger/durable artifacts. |
+| Azure Key Vault | No | Recommended future improvement for production secrets. |
+| Entra ID / app RBAC | No | Recommended future improvement for internal deployment. |
+| App Insights / full monitoring | No | Recommended future improvement. |
 
 ---
 
-# Repository Structure
+<a id="toc-techniques-used"></a>
+## Techniques used
+
+| Technique | Description |
+|---|---|
+| Retrieval-Augmented Generation | Retrieve source evidence first, then generate an answer from that evidence. |
+| Local vector retrieval | Uses precomputed local embedding vectors rather than a managed vector database. |
+| Hybrid retrieval | Combines dense retrieval, BM25 lexical retrieval, and metadata boosts. |
+| Page-aware chunking | Preserves printed page numbers and logical page metadata. |
+| Table-aware chunking | Preserves table and row-level context for rate/threshold questions. |
+| Note-aware preprocessing | Keeps note context for long-form note questions. |
+| Metadata boosting | Uses page, section, topic, and answer-type metadata to improve ranking. |
+| Cross-encoder reranking | Reranks candidate evidence before final evidence selection. |
+| Evidence-only baseline | `no_llm` mode validates retrieval without relying on answer generation. |
+| Hosted LLM generation | OpenAI, Bedrock, and Azure OpenAI synthesize answers from selected evidence. |
+| Prompt engineering | Prompts instruct the model to answer only from retrieved evidence. |
+| JSON-constrained output | Model output is expected to include answer, confidence, cited pages, and reasoning. |
+| Deterministic generation | Hosted LLM calls use low/zero temperature for more reproducible answers. |
+| Citation grounding | Answers are expected to cite or display retrieved source pages. |
+| Negative-control evaluation | Q6 intentionally used a wrong expected answer to test evidence-following behavior. |
+| Benchmark comparison | Compares no-LLM, OpenAI, Bedrock, and Azure OpenAI modes. |
+| Cost tracking | Uses per-call token and latency logging where available. |
+| Safety guardrails | Prompts require evidence-only answers and abstention when evidence is insufficient. |
+
+---
+
+<a id="toc-repository-layout"></a>
+## Repository layout
+
+Use this as the intended organized layout for GitHub. Adjust file names if your uploaded code bundle differs.
 
 ```text
 .
-├── notebooks/                    # original or reconstructed notebook workflows
-├── src/                          # reusable Python modules
-├── aws/                          # SageMaker / EC2 / cloud helper scripts
-├── app_runner_tax_chatbot/       # lightweight Streamlit chatbot wrapper
-├── artifacts/                    # local artifact bundles (not all may be public)
-├── outputs/                      # evaluation summaries / charts / screenshots
 ├── README.md
-└── requirements*.txt
+├── requirements_aws_v52.txt
+├── requirements_azure_foundry.txt
+│
+├── aws/
+│   ├── kpmg_tax_rag_v52_aws.py
+│   ├── hosted_llm_generators.py
+│   ├── taxfact_retrieval_utils.py
+│   ├── run_taxfact_benchmark_v4.py
+│   ├── compare_taxfact_runs_v2.py
+│   ├── streamlit_taxfact_app_v2.py
+│   └── taxfact_questions_v3.json
+│
+├── azure/
+│   ├── Dockerfile
+│   ├── startup_aca.sh
+│   ├── requirements_azure_foundry.txt
+│   ├── app/
+│   │   ├── azure_hosted_llm_generators.py
+│   │   ├── kpmg_tax_rag_v52_aws.py
+│   │   ├── tax_rag_v52_core.py
+│   │   ├── taxfact_retrieval_utils.py
+│   │   ├── preflight_azure_taxrag.py
+│   │   ├── run_taxfact_benchmark_azure.py
+│   │   ├── compare_taxfact_runs_v2.py
+│   │   ├── streamlit_taxfact_app_azure.py
+│   │   ├── test_azure_openai_direct.py
+│   │   └── taxfact_questions_v3.json
+│   └── scripts/
+│       ├── 01_setup_environment.sh
+│       ├── 02_export_env_template.sh
+│       ├── 03_run_smoke_tests.sh
+│       ├── 04_run_full_benchmark.sh
+│       ├── 05_run_streamlit.sh
+│       ├── 06_deploy_aca.sh
+│       ├── 07_update_aca_image.sh
+│       ├── 08_aca_logs.sh
+│       └── 09_aca_cleanup.sh
+│
+├── runtime/
+│   └── PUT_ARTIFACT_ZIP_HERE.txt
+│
+├── benchmark_outputs/
+│   └── README.md
+│
+├── visualizations/
+│   ├── evaluation_metrics.png
+│   ├── answer_hit_by_question_type.png
+│   ├── baseline_vs_final.png
+│   ├── chunk_embedding_pca.png
+│   ├── chunk_type_counts.png
+│   ├── chunks_by_page_and_type.png
+│   ├── evaluation_error_breakdown.png
+│   ├── top1_score_vs_correct.png
+│   └── verifier_verdict_counts.png
+│
+└── docs/
+    ├── report.pdf
+    ├── slides.pdf
+    ├── slides.pptx
+    └── demo_screenshots/
 ```
 
-Update this tree to match your final repo layout.
+Recommended `.gitignore`:
+
+```gitignore
+.env
+*.env
+__pycache__/
+*.pyc
+.venv/
+app/.venv/
+runtime/*.zip
+runtime/hf_cache/
+benchmark_outputs/*.json
+benchmark_outputs/*.jsonl
+benchmark_outputs/*.txt
+streamlit_logs/
+.DS_Store
+```
+
+Do not commit real API keys, cloud credentials, private `.env` files, or confidential source documents.
 
 ---
 
-# How to Run
+<a id="toc-setup-common-environment-variables"></a>
+## Setup: common environment variables
 
-## Colab / local notebook path
+```bash
+export BASE_DIR="$HOME/app_runner_demo/runtime"
+export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip"
+export HF_HOME="$BASE_DIR/hf_cache"
+mkdir -p "$BASE_DIR" "$HF_HOME"
+```
 
-1. Install dependencies.
-2. Load the corpus or artifact bundle.
-3. Build or load the retrieval index.
-4. Run the question-answering cells or script.
-5. Execute evaluation on the benchmark set.
+For Azure:
 
-## SageMaker AI Studio path
+```bash
+export BASE_DIR="$HOME/taxrag_azure_foundry/runtime"
+export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip"
+export HF_HOME="$BASE_DIR/hf_cache"
 
-1. Create the SageMaker domain and JupyterLab space.
-2. Upload the patched bundle and v5.2 artifact bundle.
-3. Run the preflight step.
-4. For lightweight tests, use CPU-friendly configuration.
-5. For full local model loading, use stronger compute.
-6. Stop the JupyterLab app when finished to avoid unnecessary charges.
+export AZURE_OPENAI_ENDPOINT="https://YOUR-AZURE-OPENAI-RESOURCE.openai.azure.com"
+export AZURE_OPENAI_API_KEY="YOUR_AZURE_OPENAI_KEY"
+export AZURE_OPENAI_DEPLOYMENT="YOUR_DEPLOYMENT_NAME"
+```
 
-## Streamlit chatbot path
+For AWS OpenAI mode:
 
-1. Create a Python environment.
-2. Install the CPU-friendly dependency set.
-3. Set a writable runtime path and artifact path.
-4. Launch Streamlit.
-5. Access the app through the SageMaker Studio proxy URL.
+```bash
+export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+export OPENAI_MODEL="gpt-4.1"
+```
 
----
+For AWS Bedrock mode:
 
-# Discussion
+```bash
+export AWS_REGION="us-east-1"
+export BEDROCK_MODEL_ID="amazon.nova-micro-v1:0"
+```
 
-## What worked well
-
-The biggest success in this project was the decision to treat retrieval as the core of the system. By v5.2, the project had become far more than “an LLM that answers tax questions.” It had become a retrieval-centered QA workflow with measurable performance gains, explicit citations, and benchmark validation. The final metrics strongly support that conclusion. 
-
-The second major success was the artifact-driven design. That design made it possible to move the system into SageMaker Studio, reproduce the observed configuration, and validate the backend logic without having to fully reconstruct every historical step from scratch. 
-
-## What was difficult
-
-The biggest technical challenge was the gap between **model logic** and **runtime reality**. A system can be algorithmically strong and still fail under small-instance constraints. The SageMaker test made that extremely clear when the local Qwen path was killed on a modest CPU-backed environment after downloading multi-gigabyte weights. 
-
-The second challenge was deployment engineering. The Streamlit extension surfaced very practical issues:
-
-* missing files because of working-directory mistakes,
-* package-resolution conflicts such as `streamlit` vs `pandas==3.0.2`,
-* and environment-specific path assumptions like the `"/app"` base directory.  
-
-## Lessons learned
-
-This project taught me that high-quality domain QA depends on:
-
-* document representation,
-* retrieval strategy,
-* reranking quality,
-* and answer control.
-
-It also taught me that deployment is not just an afterthought. Once a model or workflow leaves the notebook environment, issues like paths, permissions, dependency pins, runtime memory, and storage become central engineering concerns.
+Some accounts require an inference profile ID or ARN instead of a raw model ID. Use the value that works for your Bedrock account and region.
 
 ---
 
-# Limitations and Responsible Use
+<a id="toc-run-on-aws-sagemaker-studio-jupyterlab"></a>
+## Run on AWS SageMaker Studio / JupyterLab
 
-This system is a **document-grounded domain QA assistant**, not a substitute for professional tax advice.
+<a id="toc-1-create-and-activate-a-python-environment"></a>
+### 1. Create and activate a Python environment
 
-Its main limitations are:
+```bash
+cd ~/app_runner_demo/app_runner_tax_chatbot
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
 
-* benchmark dependence,
-* scope dependence on the indexed documents,
-* and runtime dependence for heavier local inference stages.
+pip install --index-url https://download.pytorch.org/whl/cpu torch
+pip install numpy pandas tqdm boto3 python-dotenv sentence-transformers transformers accelerate scikit-learn scipy safetensors openai streamlit
+```
 
-A strong result on a 50-question benchmark is meaningful, but it is still not the same thing as proving universal robustness across all real-world tax questions. The system is strongest when the question is well scoped and the answer can be grounded directly in the indexed material. It is weaker for highly personalized, fact-dependent, or out-of-scope advisory questions.
+<a id="toc-2-set-aws-paths"></a>
+### 2. Set AWS paths
 
-The course requirements explicitly ask for a reflection on limitations, risks, and responsible use, including concerns such as hallucination and misuse. In this project, responsible use means:
+```bash
+export BASE_DIR=~/app_runner_demo/runtime
+export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip"
+export HF_HOME="$BASE_DIR/hf_cache"
+mkdir -p "$BASE_DIR" "$HF_HOME"
+```
 
-* keeping source grounding visible,
-* avoiding overclaiming,
-* not presenting the system as tax advice,
-* and clearly marking the boundary between retrieved evidence and model-generated language. 
+<a id="toc-3-run-no-llm-evidence-baseline"></a>
+### 3. Run no-LLM evidence baseline
+
+```bash
+python run_taxfact_benchmark_v4.py \
+  --backend no_llm \
+  --questions taxfact_questions_v3.json \
+  --output-dir benchmark_outputs \
+  --label no_llm_taxfacts_v3
+```
+
+<a id="toc-4-run-aws-openai-mode"></a>
+### 4. Run AWS OpenAI mode
+
+```bash
+export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+export OPENAI_MODEL="gpt-4.1"
+
+python run_taxfact_benchmark_v4.py \
+  --backend openai \
+  --questions taxfact_questions_v3.json \
+  --output-dir benchmark_outputs \
+  --label openai_taxfacts_v3
+```
+
+<a id="toc-5-run-aws-bedrock-mode"></a>
+### 5. Run AWS Bedrock mode
+
+Before running Bedrock mode, confirm that the SageMaker execution role has Bedrock permission such as `bedrock:InvokeModel`.
+
+```bash
+export AWS_REGION=us-east-1
+export BEDROCK_MODEL_ID="amazon.nova-micro-v1:0"
+
+python run_taxfact_benchmark_v4.py \
+  --backend bedrock \
+  --questions taxfact_questions_v3.json \
+  --output-dir benchmark_outputs \
+  --label bedrock_taxfacts_v3
+```
+
+<a id="toc-6-compare-aws-benchmark-runs"></a>
+### 6. Compare AWS benchmark runs
+
+```bash
+python compare_taxfact_runs_v2.py \
+  benchmark_outputs/no_llm_taxfacts_v3.json \
+  benchmark_outputs/openai_taxfacts_v3.json \
+  --output-dir benchmark_outputs \
+  --label no_llm_vs_openai_taxfacts_v3
+
+python compare_taxfact_runs_v2.py \
+  benchmark_outputs/no_llm_taxfacts_v3.json \
+  benchmark_outputs/bedrock_taxfacts_v3.json \
+  --output-dir benchmark_outputs \
+  --label no_llm_vs_bedrock_taxfacts_v3
+```
+
+<a id="toc-7-run-aws-streamlit-app"></a>
+### 7. Run AWS Streamlit app
+
+```bash
+streamlit run streamlit_taxfact_app_v2.py \
+  --server.port=8080 \
+  --server.address=0.0.0.0 \
+  --server.enableCORS=false \
+  --server.enableXsrfProtection=false \
+  --server.fileWatcherType=none \
+  --server.headless=true
+```
+
+In SageMaker Studio, use the proxy URL rather than opening `0.0.0.0` directly:
+
+```text
+https://YOUR-STUDIO-HOST.studio.us-east-1.sagemaker.aws/jupyterlab/default/proxy/8080/
+```
 
 ---
 
-# Future Work
+<a id="toc-run-on-azure-foundry-ai-azure-openai"></a>
+## Run on Azure Foundry AI / Azure OpenAI
 
-The next improvements I would prioritize are:
+<a id="toc-1-prepare-workspace"></a>
+### 1. Prepare workspace
 
-* a broader benchmark with more error categories,
-* stronger qualitative evaluation examples,
-* more polished citation display,
-* a cleaner distinction between lightweight retrieval-only demos and full local inference paths
-* and a more stable cloud deployment path for the chatbot demo.
+```bash
+mkdir -p ~/taxrag_azure_foundry
+cd ~/taxrag_azure_foundry
+unzip azure_foundry_gpt41_streamlit_aca_full_code_bundle.zip
+mkdir -p runtime runtime/hf_cache
+cp /path/to/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip runtime/
+```
 
-From a product perspective, the most natural next step would be a more production-oriented service layer around the retrieval-first backend. From a research perspective, the next useful step would be deeper error analysis by question type and chunk type.
+<a id="toc-2-install-dependencies"></a>
+### 2. Install dependencies
 
+```bash
+bash scripts/01_setup_environment.sh
+```
 
+<a id="toc-3-set-environment-variables"></a>
+### 3. Set environment variables
 
+Edit the template:
 
+```bash
+nano scripts/02_export_env_template.sh
+```
+
+Example values:
+
+```bash
+export BASE_DIR="$HOME/taxrag_azure_foundry/runtime"
+export ARTIFACT_ZIP="$BASE_DIR/kpmg_tax_rag_outputs_v52_corporate_50q-20260404T200240Z-1-001.zip"
+export HF_HOME="$BASE_DIR/hf_cache"
+
+export AZURE_OPENAI_ENDPOINT="https://YOUR-AZURE-OPENAI-RESOURCE.openai.azure.com"
+export AZURE_OPENAI_API_KEY="YOUR_AZURE_OPENAI_KEY"
+export AZURE_OPENAI_DEPLOYMENT="YOUR_DEPLOYMENT_NAME"
+```
+
+Then run:
+
+```bash
+source scripts/02_export_env_template.sh
+```
+
+<a id="toc-4-test-azure-openai-directly"></a>
+### 4. Test Azure OpenAI directly
+
+```bash
+python app/test_azure_openai_direct.py
+```
+
+<a id="toc-5-run-smoke-tests"></a>
+### 5. Run smoke tests
+
+```bash
+bash scripts/03_run_smoke_tests.sh
+```
+
+<a id="toc-6-run-azure-no-llm-and-azure-openai-benchmark"></a>
+### 6. Run Azure no-LLM and Azure OpenAI benchmark
+
+```bash
+bash scripts/04_run_full_benchmark.sh
+```
+
+Outputs are written to:
+
+```text
+app/benchmark_outputs/
+```
+
+<a id="toc-7-run-azure-streamlit-locally"></a>
+### 7. Run Azure Streamlit locally
+
+```bash
+source scripts/02_export_env_template.sh
+source app/.venv/bin/activate
+cd app
+
+streamlit run streamlit_taxfact_app_azure.py \
+  --server.port=8000 \
+  --server.address=0.0.0.0 \
+  --server.enableCORS=false \
+  --server.enableXsrfProtection=false \
+  --server.fileWatcherType=none \
+  --server.headless=true
+```
+
+---
+
+<a id="toc-deploy-azure-streamlit-app-to-azure-container-apps"></a>
+## Deploy Azure Streamlit app to Azure Container Apps
+
+The Azure bundle includes Docker and Azure Container Apps deployment scripts.
+
+```bash
+cd ~/taxrag_azure_foundry
+source scripts/02_export_env_template.sh
+
+export RG="rg_e222_tax_rag"
+export LOCATION="eastus"
+export ACA_ENV="taxrag-aca-env"
+export APP_NAME="taxrag-streamlit"
+export ACR_NAME="acrtaxrag$(date +%m%d%H%M)$RANDOM"
+
+bash scripts/06_deploy_aca.sh
+```
+
+The deployment script should:
+
+1. create or reuse the resource group,
+2. create the Container Apps environment,
+3. build the image through Azure Container Registry,
+4. deploy Streamlit to Azure Container Apps,
+5. inject Azure OpenAI credentials as runtime secrets/environment variables,
+6. print the public HTTPS URL.
+
+Update after code changes:
+
+```bash
+cd ~/taxrag_azure_foundry
+source scripts/02_export_env_template.sh
+
+export RG="rg_e222_tax_rag"
+export APP_NAME="taxrag-streamlit"
+export ACR_NAME="<ACR_NAME_FROM_FIRST_DEPLOY>"
+
+bash scripts/07_update_aca_image.sh
+```
+
+View logs:
+
+```bash
+bash scripts/08_aca_logs.sh
+```
+
+Clean up resources:
+
+```bash
+bash scripts/09_aca_cleanup.sh
+```
+
+---
+
+<a id="toc-evaluation"></a>
+## Evaluation
+
+<a id="toc-preserved-v5-2-benchmark"></a>
+### Preserved v5.2 benchmark
+
+| Metric | Value | Interpretation |
+|---|---:|---|
+| Questions evaluated | 50 | Corporate tax facts benchmark. |
+| Top-1 retrieval hit rate | 0.98 | Correct evidence was usually ranked first. |
+| Top-k retrieval hit rate | 1.00 | Correct evidence appeared somewhere in retrieved set for every question. |
+| Baseline answer hit rate | 0.30 | Naive answer extraction was much weaker than full RAG. |
+| Final answer hit rate | 1.00 | Final workflow answered the preserved benchmark correctly. |
+| Citation hit rate | 1.00 | Answers were supported by expected source pages. |
+| Exact-mode rate | 0.92 | Most questions were handled through controlled exact behavior. |
+| Verifier-supported rate | 1.00 | Verifier marked final answers as supported. |
+
+<a id="toc-revised-cloud-benchmark"></a>
+### Revised cloud benchmark
+
+The revised benchmark compares:
+
+- AWS `no_llm`,
+- AWS `openai`,
+- AWS `bedrock`,
+- Azure `no_llm`,
+- Azure `azure_openai`.
+
+Important reported results:
+
+| Result | Interpretation |
+|---|---|
+| Cloud page hit = 1.00 | Retrieval consistently found expected source pages across modes. |
+| OpenAI/Azure value hit ≈ 0.60 | Hosted LLMs were useful for value extraction and synthesis. |
+| Exact match ≈ 0.30 | Strict string matching undercounted correct long-form answers. |
+| Manual source-grounding review | Needed to judge long note answers fairly. |
+
+<a id="toc-recommended-evaluation-dimensions"></a>
+### Recommended evaluation dimensions
+
+| Dimension | What to check |
+|---|---|
+| Retrieval hit | Did the system retrieve the expected page or chunk? |
+| Page hit | Did the expected printed page appear in selected evidence? |
+| Citation hit | Did the answer cite or show the expected page? |
+| Value hit | Did the answer extract the correct rate, threshold, date, or form? |
+| Faithfulness | Is every answer claim supported by retrieved evidence? |
+| Abstention | Does the model say it cannot determine the answer when evidence is insufficient? |
+| Latency | How long does retrieval + generation take? |
+| Cost | How many input/output tokens does each hosted LLM call use? |
+| Label validity | Is the expected answer itself valid? |
+
+---
+
+<a id="toc-q6-intentional-trap-negative-control-test"></a>
+## Q6 intentional trap / negative-control test
+
+Q6 is intentionally included as a **wrong expected-answer trap**.
+
+The purpose is to test whether the deployed model blindly optimizes for the expected-answer label or follows the retrieved source evidence.
+
+<a id="toc-trap-design"></a>
+### Trap design
+
+```text
+Q6 expected answer = intentionally wrong label
+Correct behavior = disagree with the bad label and answer from the Tax Facts evidence
+```
+
+<a id="toc-what-happened"></a>
+### What happened
+
+The Azure OpenAI and AWS OpenAI/Bedrock answers disagreed with the wrong expected answer but matched the relevant Tax Facts evidence. Under a strict automatic expected-answer metric, the model looked wrong. Under source-grounded review, the model behavior was correct.
+
+<a id="toc-why-this-matters"></a>
+### Why this matters
+
+For tax advisory, evaluation should not rely only on exact string matching. It should include:
+
+- source review,
+- negative-control questions,
+- expected-answer validation,
+- semantic coverage scoring,
+- numeric normalization,
+- reviewer feedback.
+
+A model that disagrees with a bad label may be doing the right thing.
+
+```text
+Wrong label ≠ wrong model
+Correct source-grounded answer = pass
+```
+
+---
+
+<a id="toc-cost-model-tokens-not-pdf-pages"></a>
+## Cost model: tokens, not PDF pages
+
+Hosted LLM cost is based on tokens, not PDF pages.
+
+At answer time, this RAG system does **not** send the whole PDF to the LLM. The PDF has already been preprocessed into chunks. For each question, the LLM sees selected chunks and metadata, not the entire source document.
+
+<a id="toc-answer-time-cost-formula"></a>
+### Answer-time cost formula
+
+```text
+cost = input_tokens × input_rate + output_tokens × output_rate
+```
+
+<a id="toc-what-counts-as-input-tokens"></a>
+### What counts as input tokens?
+
+- system instructions,
+- user question,
+- selected chunks,
+- snippet text,
+- metadata,
+- citations,
+- optional chat history.
+
+<a id="toc-what-counts-as-output-tokens"></a>
+### What counts as output tokens?
+
+- answer generated by OpenAI, Azure OpenAI, or AWS Bedrock.
+
+<a id="toc-what-is-not-token-billed-as-an-llm-call-in-this-prototype"></a>
+### What is not token-billed as an LLM call in this prototype?
+
+- local retrieval,
+- local BAAI embeddings already stored in the artifact,
+- local BM25 retrieval,
+- local reranking,
+- local file lookup.
+
+Those are compute/hosting costs, not hosted LLM token costs.
+
+<a id="toc-production-measurement-plan"></a>
+### Production measurement plan
+
+Recommended per-call log schema:
+
+```json
+{
+  "timestamp": "2026-05-09T00:00:00Z",
+  "provider": "azure_openai",
+  "model_or_deployment": "gpt-4.1-deployment-name",
+  "question_id": "Q6",
+  "mode": "azure_openai",
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "total_tokens": 0,
+  "retrieved_pages": [81],
+  "retrieved_chunk_count": 6,
+  "latency_ms": 0,
+  "estimated_cost_usd": 0.0,
+  "source_grounded_pass": true,
+  "label_trap": true
+}
+```
+
+Measure exact usage from the provider response when possible. Estimate only when historical logs were not saved.
+
+---
+
+<a id="toc-streamlit-demo-flow"></a>
+## Streamlit demo flow
+
+Recommended demo order:
+
+1. Start in `no_llm` mode.
+2. Ask a focused rate or threshold question.
+3. Show the retrieved pages/snippets without synthesis.
+4. Switch to `azure_openai`, `openai`, or `bedrock` mode.
+5. Ask the same question.
+6. Show the generated answer beside the source evidence.
+7. Run or describe Q6 to explain why evidence should beat a bad expected label.
+
+Good demo questions:
+
+```text
+What is the threshold for a general corporation in Alberta?
+What is the 2025 Federal Part VI tax rate?
+What is the R&D ITC rate?
+What are the filing and payment deadlines for a corporate tax return?
+What are the notes for R&D investment tax credits?
+```
+
+Simple demo message:
+
+```text
+The AI tool shortens research time, but it keeps the evidence visible.
+```
+
+---
+
+<a id="toc-safety-and-responsible-use-controls"></a>
+## Safety and responsible-use controls
+
+Current controls:
+
+- answer only from retrieved evidence,
+- return citations/source pages,
+- abstain when evidence is insufficient,
+- keep evidence visible beside the answer,
+- use deterministic/low-temperature generation,
+- separate retrieval evaluation from answer-generation evaluation,
+- treat output as educational tax facts, not professional advice.
+
+Recommended disclaimer:
+
+> This tool is an educational prototype for source-grounded tax-fact lookup. It does not provide legal, accounting, or tax advice. A qualified professional must review the source evidence and final conclusion.
+
+---
+
+<a id="toc-production-readiness-status"></a>
+## Production-readiness status
+
+This project is a cloud-deployable proof of concept, not a production system.
+
+<a id="toc-present-in-prototype"></a>
+### Present in prototype
+
+| Feature | Status |
+|---|---:|
+| Working RAG pipeline | Present |
+| Retrieval-only baseline | Present |
+| Hosted LLM generation | Present |
+| AWS OpenAI mode | Present |
+| AWS Bedrock mode | Present |
+| Azure OpenAI mode | Present |
+| Streamlit UI | Present |
+| Docker packaging | Present |
+| Azure Container Apps deployment | Present |
+| Benchmark scripts | Present |
+| Visualizations | Present |
+| Q6 negative-control trap | Present |
+| Cost/token measurement plan | Present |
+
+<a id="toc-missing-for-production"></a>
+### Missing for production
+
+| Feature | Current status |
+|---|---|
+| Managed vector database/search index | Not implemented; local embeddings only. |
+| Azure AI Search | Not implemented. |
+| Azure Blob Storage / durable artifact storage | Not implemented. |
+| Cosmos DB / persistent chat or metadata store | Not implemented. |
+| Azure Key Vault / AWS Secrets Manager | Not fully implemented; env vars and ACA secrets are used. |
+| Entra ID user authentication | Not implemented. |
+| Private networking | Not implemented. |
+| Monitoring / observability dashboard | Minimal. |
+| CI/CD | Not implemented. |
+| Infrastructure as Code | Not implemented. |
+| Automated document refresh / re-indexing | Not implemented. |
+| Formal professional review workflow | Not implemented. |
+
+---
+
+<a id="toc-future-production-path-for-income-tax-act-advisory-rag"></a>
+## Future production path for Income Tax Act Advisory RAG
+
+A more production-like version for an Income Tax Act Advisory use case would likely need:
+
+1. **Curated content scope**
+   - Income Tax Act sections,
+   - technical interpretations,
+   - internal guidance,
+   - checklists,
+   - rate/deadline tables,
+   - approved public and internal sources.
+
+2. **Managed retrieval layer**
+   - Azure AI Search or another managed vector/hybrid search service,
+   - section-level and paragraph-level metadata,
+   - citation references to exact statutory sections or internal documents.
+
+3. **Durable storage**
+   - Azure Blob Storage or controlled document repository,
+   - versioned indexes,
+   - data-refresh and rollback process.
+
+4. **Security and access control**
+   - Entra ID login,
+   - role-based access control,
+   - Key Vault secrets,
+   - private networking,
+   - audit logs.
+
+5. **Human review workflow**
+   - reviewer marks answer as correct, too broad, too narrow, unsupported, or label-trap pass/fail,
+   - reviewer comments captured for evaluation refresh,
+   - escalation for high-risk advisory outputs.
+
+6. **Evaluation dashboard**
+   - page hit,
+   - source-grounded pass rate,
+   - value hit,
+   - semantic coverage,
+   - latency,
+   - cost per question,
+   - rework reduction,
+   - document freshness.
+
+7. **Responsible-use boundary**
+   - research assistance only,
+   - clear source display,
+   - no autonomous final advice,
+   - tax professional remains responsible for conclusion.
+
+---
+
+<a id="toc-troubleshooting"></a>
+## Troubleshooting
+
+<a id="toc-the-app-says-the-artifact-cannot-be-found"></a>
+### The app says the artifact cannot be found
+
+Check:
+
+```bash
+echo "$BASE_DIR"
+echo "$ARTIFACT_ZIP"
+ls -lah "$BASE_DIR"
+ls -lah "$ARTIFACT_ZIP"
+```
+
+<a id="toc-azure-openai-direct-call-fails"></a>
+### Azure OpenAI direct call fails
+
+Check:
+
+```bash
+echo "$AZURE_OPENAI_ENDPOINT"
+echo "$AZURE_OPENAI_DEPLOYMENT"
+python app/test_azure_openai_direct.py
+```
+
+Do not print the API key in logs.
+
+<a id="toc-streamlit-works-locally-but-not-in-azure-container-apps"></a>
+### Streamlit works locally but not in Azure Container Apps
+
+Check logs:
+
+```bash
+az containerapp logs show \
+  --name taxrag-streamlit \
+  --resource-group rg_e222_tax_rag \
+  --tail 100
+```
+
+Common causes:
+
+- missing artifact zip,
+- wrong startup path,
+- missing environment variables,
+- dependency mismatch,
+- container port mismatch,
+- app health check failing.
+
+<a id="toc-bedrock-mode-returns-access-denied"></a>
+### Bedrock mode returns access denied
+
+Check:
+
+- AWS region,
+- model ID or inference profile ID,
+- SageMaker execution role,
+- `bedrock:InvokeModel` permission,
+- model access in Bedrock console.
+
+<a id="toc-exact-score-is-low-even-though-answer-looks-correct"></a>
+### Exact score is low even though answer looks correct
+
+Manual source-grounding review is needed. Exact string matching is brittle for long notes, paraphrases, number formatting, and intentionally wrong expected-answer traps.
+
+---
+
+<a id="toc-project-achievements"></a>
+## Project achievements
+
+This project demonstrates:
+
+- a complete retrieval-first RAG workflow,
+- no-LLM evidence mode,
+- hosted LLM synthesis through OpenAI, AWS Bedrock, and Azure OpenAI,
+- Streamlit demo interface,
+- Azure Docker + Azure Container Apps deployment,
+- strong preserved v5.2 retrieval metrics,
+- multi-cloud comparison over one evidence artifact,
+- trap-aware evaluation through Q6,
+- cost/token measurement planning,
+- a responsible-use boundary for tax-advisory research support.
+
+The most important learning is:
+
+```text
+In tax RAG, retrieval quality and source visibility matter more than model fluency.
+```
+
+---
+
+<a id="toc-license-and-use"></a>
+## License and use
+
+This repository is intended for educational use in CSCI E-222 and for demonstrating a public, source-grounded RAG architecture pattern. Do not include confidential tax documents, proprietary firm code, private client data, or exposed API keys.
 
